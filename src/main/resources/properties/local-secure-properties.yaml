@@ -1,0 +1,5 @@
+accessGroup.alertnotification:
+  api:
+    clientId: "![]"
+    clientSecret: "![]"
+  

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:custom-metrics="http://www.mulesoft.org/schema/mule/custom-metrics" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/custom-metrics http://www.mulesoft.org/schema/mule/custom-metrics/current/mule-custom-metrics.xsd">
+	<sub-flow name="getfrom-sql" doc:id="b90ee8a9-f370-441f-b51f-c983fbedd980" >
+		<json-logger:logger doc:name="Start Of Flow" doc:id="3bbbb47d-5f4a-4df9-835d-774b9d74286f" message='#["Start Salesforce Insert Flow"]' config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<set-variable value="select" doc:name="Set Sql Action Select" doc:id="e93b7734-631f-4dbe-9830-ce4766d46b92" variableName="sqlAction"/>
+		<flow-ref doc:name="Sql Action Flow" doc:id="80fcb770-ca57-4894-96ce-f076ba20e90b" name="sqlactions-flow"/>
+		<ee:transform doc:name="Transform Message" doc:id="fb648d5e-94e9-4387-9c5e-11a91690daaa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import toBoolean from dw::util::Coercions
+output application/csv quoteValues=true,header=true,separator=";",escape='"'
+---
+	payload map (item) ->{
+	Project_Code__c: item.CH_Code,
+	Id : item.Account__c,
+	'Name': item.'CH_Code'
+	}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="40421ecc-a92d-4361-bfe1-d13aee65df3c" >
+			<when expression="#[!(isEmpty(payload))]">
+				<json-logger:logger doc:name="After Transform" doc:id="0b88adb8-5c0b-47d1-8093-7711a506a7b2" config-ref="JSON_Logger_Config" message='#["After Data Transform"]' tracePoint="FLOW">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+				<salesforce:create-job-bulk-api-v2 doc:name="Create job bulk api v 2" doc:id="71796335-478d-47e2-8194-45ed69ce2d4f" config-ref="Salesforce_Config" objectType="${salesforceconfig.bulkObject}" operation="upsert" lineEnding="${salesforceconfig.bulkLineEnding}" columnDelimiter="${salesforceconfig.bulkColumnDelim}" externalIdFieldName='Id'/>
+				<os:store doc:name="Store-ID" doc:id="1703acd1-adc5-4500-841d-a0eb2bbec95d" key="#[payload.id]" objectStore="OS-BatchId">
+			<os:value><![CDATA[#[payload.id]]]></os:value>
+		</os:store>
+				<json-logger:logger doc:name="End Of Flow" doc:id="ab7b5100-5ef6-44b4-b061-9d908eee191a" config-ref="JSON_Logger_Config" message='#["Finish Salesforce Insert Flow"]' tracePoint="END">
+			<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{ 
+}]]]></json-logger:content>
+		</json-logger:logger>
+				<!-- [STUDIO:"Until Successful"]<until-successful maxRetries="30" doc:name="Until Successful" doc:id="8311b6ab-5790-48d8-81e7-f796bb6379f9" millisBetweenRetries="30000" >
+			<salesforce:get-job-state-bulk-api-v2 doc:name="Get job state bulk api v " doc:id="c2408624-4bc7-4eb5-a537-479d74fb11bb" config-ref="Salesforce_Config" id="#[payload.id&#93;" />
+			<choice doc:name="Choice" doc:id="f26b49a6-6dee-456a-af9e-8345ed7640a6" >
+				<when expression="#[payload.state == 'JobComplete'&#93;" >
+					<salesforce:retrieve-job-successful-results-bulk-v2 doc:name="Retrieve job successful results bulk v " doc:id="30da8a03-f1e9-4147-b3b2-71dfc08ae0c5" config-ref="Salesforce_Config" id="#[payload.Id&#93;" target="successResults"/>
+					<json-logger:logger doc:name="After Retrieve Job Success" doc:id="9ae9edba-491c-4849-bb41-452322f36dd3" config-ref="JSON_Logger_Config" message='#["After Retrieve Job Success"&#93;'>
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+    successRecords: payload.numberRecordsProcessed,
+    failedRecords: payload.numberRecordsFailed,
+    apexProccessingTime: payload.apexProcessingTime,
+    apiActiveTime: payload.apiActiveProcessingTime    
+}&#93;&#93;&#93;></json-logger:content>
+					</json-logger:logger>
+					<choice doc:name="Choice" doc:id="89c37d43-a1a4-447c-9e44-f8e2975eb2fc">
+						<when expression="#[payload.numberRecordsFailed &gt; 0&#93;">
+							<salesforce:retrieve-job-failed-results-bulk-v2 doc:name="Retrieve job failed results bulk v 2" doc:id="1301cace-436f-4ccc-9779-3a616433dc04" config-ref="Salesforce_Config" id="#[payload.Id&#93;" target="payloadfailures"/>
+							<json-logger:logger doc:name="After Retrieved Failed Records" doc:id="885203b4-b684-4176-b5fb-c0144c6cb553" config-ref="JSON_Logger_Config" message='#["Failed Records"&#93;'/>
+							<ee:transform doc:name="Format for Error Hospital" doc:id="50e1c9a8-cc99-445f-8e1e-91497d3b9fa6" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+	vars.payloadfailures map (item) ->{
+	dataFlow: "Batch-Mule-App",
+	errorDetails: "",
+	errorText: item.errorMessage,
+	payload: write(item.originalFields, "application/json"),
+	retryCount: 0,
+	retryFlag: true,
+	sourceSystem: "SQL",
+	status:"Retry",
+	targetSystem:"Salesforce"
+	}&#93;&#93;></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<flow-ref doc:name="Error Hospital" doc:id="8c4a3354-2bab-4eab-9f0c-931ba7b7c22b" name="errorhospital-flow" targetValue="#[payloadfailures&#93;"/>
+						</when>
+						<otherwise >
+							<json-logger:logger doc:name="No Record Failures" doc:id="4c6e3b13-0fde-4151-86a3-3c026c92ac35" config-ref="JSON_Logger_Config" message='#["No Failed Records"&#93;'/>
+						</otherwise>
+					</choice>
+					<set-variable value="true" doc:name="Set Backupdate" doc:id="fb5a407c-d55f-4467-a497-26a2a897e174" variableName="backupdateRequired"/>
+					<choice doc:name="Choice" doc:id="41a3fcaf-d447-4750-9b63-f9831adc07a6">
+						<when expression="#[(vars.backupdateRequired == 'true' and sizeOf(vars.successResults) &gt; 0) == true&#93;">
+							<json-logger:logger doc:name="Backupdate Required" doc:id="3ede517f-5036-4ef6-9f97-4dcc3663fd40" config-ref="JSON_Logger_Config" message='#["Starting Sql Backupdate"&#93;'>
+								<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+
+}&#93;&#93;&#93;></json-logger:content>
+							</json-logger:logger>
+							<set-variable value="update" doc:name="Set sqlAction Update" doc:id="d17ad3cc-6f62-4cc2-8642-316ba2221688" variableName="sqlAction"/>
+							<flow-ref doc:name="Call SQL Actions Flow" doc:id="b8e62049-5508-4a0c-b1d2-f12c3cbb153d" name="sqlactions-flow"/>
+						</when>
+						<otherwise >
+							<json-logger:logger doc:name="No Backupdate Required" doc:id="654897ed-78d8-4764-ad5f-665de5788663" config-ref="JSON_Logger_Config" message='#["No Backupdate Required"&#93;'>
+								<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+}&#93;&#93;&#93;></json-logger:content>
+							</json-logger:logger>
+						</otherwise>
+					</choice>
+					<json-logger:logger doc:name="Success Finished" doc:id="824501b3-22bd-4325-b99f-dbd08367b27f" config-ref="JSON_Logger_Config" message='#["Job Finished with success"&#93;' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+   payload: payload
+}&#93;&#93;&#93;></json-logger:content>
+					</json-logger:logger>
+				</when>
+				<when expression="#[payload.state == 'Failed'&#93;" >
+					<json-logger:logger doc:name="Failed Job " doc:id="566062e9-e575-488b-9cb1-2f5503a56c62" config-ref="JSON_Logger_Config" message='#["Job Finished with Failed "&#93;' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+ ErrorMessage: payload.errorMessage
+}&#93;&#93;&#93;></json-logger:content>
+					</json-logger:logger>
+				</when>
+				<otherwise >
+					<json-logger:logger doc:name="Logger" doc:id="fcc02b6c-ee0b-4d24-a601-f9efbdedc6be" config-ref="JSON_Logger_Config" message='#["Job Still Runnning " ++ payload.Id&#93;' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+   
+}&#93;&#93;&#93;></json-logger:content>
+					</json-logger:logger>
+					<raise-error doc:name="Raise error" doc:id="41227e92-2949-468d-9b31-74b4bc1e3954" type="CUSTOM:CUSTOM_ERROR" description="Not Ready" />
+				</otherwise>
+			</choice>
+		</until-successful> [STUDIO] -->
+			</when>
+			<otherwise>
+				<json-logger:logger doc:name="Logger" doc:id="68374e69-3590-419c-8715-961dca3ee8ef" config-ref="JSON_Logger_Config" message='"No Data found in DataBase"'>
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="sqlactions-flow" doc:id="ac865482-4b5a-4336-bf38-006574026a34" >
+		<json-logger:logger doc:name="Before SQL Actions" doc:id="c9f56abc-5e4a-4f0f-b538-fc90cb8f3685" config-ref="JSON_Logger_Config" message='#["Before SQL Actions"]'>
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    sqlAction: vars.sqlAction
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<choice doc:name="Choice" doc:id="f34729a2-877c-4f27-80f3-30cab741e654" >
+			<when expression='#[vars.sqlAction == "select"]'>
+				<json-logger:logger doc:name="Sql Select" doc:id="395ee1a7-ad07-4aa3-b499-b66de5c596bb" config-ref="JSON_Logger_Config" message='#["Selecting Sql Data"]' tracePoint="FLOW">
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+ 
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<db:select doc:name="Select Data" doc:id="7121e241-9bbe-43a7-a3c5-cf4401a263b6" config-ref="thssql-Server" >
+					<db:sql ><![CDATA[${sql.thssql1.selectQuery}
+]]></db:sql>
+				</db:select>
+			</when>
+			<when expression='vars.sqlAction == "insert"'>
+				<json-logger:logger doc:name="insert SQL Data" doc:id="14c3f37c-bb02-429f-9af7-a2982e523670" config-ref="JSON_Logger_Config" message='#["Insert Sql Data"]' tracePoint="FLOW">
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+ 
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<db:bulk-insert doc:name="Bulk insert" doc:id="5494f8c5-87fd-4aa2-a2eb-e157c33f8d1a" config-ref="thssql-Server">
+					<db:bulk-input-parameters ><![CDATA[#[successResults]]]></db:bulk-input-parameters>
+					<db:sql ><![CDATA[${sql.thssql1.insertQuery}]]></db:sql>
+				</db:bulk-insert>
+			</when>
+			<when expression='vars.sqlAction == "update"'>
+				<json-logger:logger doc:name="Update SQL Data" doc:id="803e4a49-1afc-473b-aad0-2d9c03d27884" config-ref="JSON_Logger_Config" message='#["Update SQL Data"]' tracePoint="FLOW">
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<db:bulk-update doc:name="Bulk update" doc:id="d6357eec-68ed-4626-ba62-d6b08f0cf500" config-ref="thssql-Server">
+					<db:bulk-input-parameters ><![CDATA[#[vars.successResults.originalFields]]]></db:bulk-input-parameters>
+					<db:sql ><![CDATA[${sql.thssql1.updateQuery}]]></db:sql>
+				</db:bulk-update>
+				<json-logger:logger doc:name="Logger" doc:id="9b15ed6d-7eb7-46f0-8494-8f3d3127d803" config-ref="JSON_Logger_Config" message='#["Post Update"]'>
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+			</when>
+			<when expression='vars.sqlAction == "merge"'>
+				<json-logger:logger doc:name="Merge SQL Data" doc:id="b236b14e-2131-423b-9508-cda863c33d44" config-ref="JSON_Logger_Config" message='#["Merge SQL Data"]'/>
+				<db:bulk-update doc:name="Bulk Merge" doc:id="78b4b3ae-b007-4a25-9e1b-dbf642482e21" config-ref="thssql-Server">
+					<db:sql ><![CDATA[${sql.thssql1.mergeQuery}]]></db:sql>
+				</db:bulk-update>
+				<json-logger:logger doc:name="Finish Merge" doc:id="accb2e1e-cbba-4d81-b6ed-645f16e593df" config-ref="JSON_Logger_Config" message='#["Finish Merge"]'/>
+			</when>
+			<otherwise >
+				<json-logger:logger doc:name="No SQL Action Found" doc:id="4dded517-224f-4160-9bb5-dbc8d3faa086" config-ref="JSON_Logger_Config" message='#["No Matching SQL Action"]' tracePoint="FLOW">
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

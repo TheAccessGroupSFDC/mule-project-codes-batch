@@ -1,0 +1,9 @@
+sql:
+  thssql1:  
+    username: "![5IEwbPGmfluQotxjTiaJ9g==]"
+    password: "![MsDeTIG6JMcM2FdBQ7S7Qg==]"
+ 
+salesforceconfig:
+      consumer:      "![aV+5d6tCJhIxZzPEjUUWnFZKRbVUbr7wztvPN4dFrxfga5LEidBoRGV41Swj47QsBNL8Hl6Mn4sJKPYttwj4i7omt2Q8PvAXHBuk49kXg30GQ9C4eSxWqT/Mn9Gzf4wX]"
+      storePassword: "![KhD2i23UUKun30AS0Zwxgs2mxIKyQeo6n628Zi4rpSE=]"
+      princable:     "![Uc4Jl72ZqnrbXrHW+GeorgExpWUFSFUpDJ0VoPCxHO0wwdGn52JE9RRlYES3oyOq]"

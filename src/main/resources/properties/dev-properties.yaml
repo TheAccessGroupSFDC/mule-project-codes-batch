@@ -1,0 +1,62 @@
+sql:
+  thssql1:
+    host: "THSCenAccSQL139.uk.access-accounts.com"
+    port: "1433"
+    database: "salesforce"
+    selectQuery: "select CH_CODE, CC2, id from(
+SELECT CH_CODE,
+Substring(CH_CODE,0,CharIndex('-',CH_CODE)) CC2
+FROM [ACCOUNTS].[dbo].[CST_COSTHEADER]
+where CH_STATUS = 'A'
+and (CH_CODE like '%-0%'
+OR  CH_CODE like '%-1%'
+OR  CH_CODE like '%-2%'
+OR  CH_CODE like '%-3%'
+OR  CH_CODE like '%-4%'
+OR  CH_CODE like '%-5%'
+OR  CH_CODE like '%-6%'
+OR  CH_CODE like '%-7%'
+OR  CH_CODE like '%-8%'
+OR  CH_CODE like '%-9%')) tbl1
+inner join [SalesForce].[dbo].Accounts on  CC2 collate SQL_Latin1_General_CP1_CI_AS =  AccountNumber
+where isdeleted = 0" 
+    updateQuery: "update salesforce.dbo.opportunity set update_salesforce = 0 where Id = :Id"
+    insertQuery: "select 1 from test"
+    mergeQuery: ""
+     
+
+     
+salesforceconfig:
+  keyStore:      "${mule.home}/apps/${app.name}/jks/dev/00DQz000000TZyT.jks"
+  certalias:     "mulesoft"
+  tokenEndpoint: "test"
+  bulkObject: "Project_Code__c"
+  selectQuery: ""
+  bulkLineEnding: "CRLF"
+  bulkColumnDelim: "SEMICOLON"
+  bulkExternalIdFieldName: "Id"
+  
+errorreprocessing:
+  selectQuery: "select id, Data_Flow__c, Payload__c, Retry_Count__c, Retry_Flag__c, Correlation_Id__c, Status__c from Error_Hospital__c where Data_Flow__c = ':dataflow' and Retry_Flag__c = true"
+  dataflow: "mule-test-flow"
+  
+http:
+  errorhospital:
+    host: "error-hospital-sapi-dev-qzg5c3.pa977o.gbr-e1.cloudhub.io"
+    port: "443"
+    frequency: "5000"
+    reconn: "5"
+    
+scheduler:
+  sqltosalesforce:
+    frequency: "5"
+    startdelay: "0"
+  salesforcetosql:
+    frequency: "5"
+    startdelay: "0"
+  bulkget: 
+    frequency: "1"
+    startdelay: "5"
+  errorrepro: 
+    frequency: "1"
+    startdelay: "5"

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:custom-metrics="http://www.mulesoft.org/schema/mule/custom-metrics" xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:successfactors="http://www.mulesoft.org/schema/mule/successfactors" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/successfactors http://www.mulesoft.org/schema/mule/successfactors/current/mule-successfactors.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/custom-metrics http://www.mulesoft.org/schema/mule/custom-metrics/current/mule-custom-metrics.xsd">
+	<flow name="batch-sql-to-salesforce" doc:id="aab500e7-a2db-4d74-a093-ac7711a6b1a9" >
+		<scheduler doc:name="Scheduler" doc:id="3c835a97-cee4-4796-89dd-3cf93ba6befc" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="${scheduler.sqltosalesforce.frequency}" timeUnit="MINUTES" startDelay="${scheduler.sqltosalesforce.startdelay}"/>
+			</scheduling-strategy>
+		</scheduler>
+		<set-variable value="#[now()]" doc:name="Start Time" doc:id="d8697af5-13f3-4215-845b-94ca3f2f76df" variableName="startTime"/>
+		<json-logger:logger doc:name="Before Job Start" doc:id="27124b68-ff04-4121-bd9a-df058e7981f3" message='#["${batch.name} Has Started"]' config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    timestarted: now()
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<flow-ref doc:name="SQL To Salesforce" doc:id="ba930226-560b-4842-8bd8-c6c0b1d3f786" name="getfrom-sql"/>
+		<json-logger:logger doc:name="After Job Finished" doc:id="c3286814-62a2-43fe-bbf4-38789e019709" message='#["${batch.name} Has Finished"]' tracePoint="END" config-ref="JSON_Logger_Config">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+	timestarted: vars.startTime,
+    timefinished: now(),
+    duration: vars.startTime - now()
+}]]]></json-logger:content>
+		</json-logger:logger>
+	</flow>
+	<flow name="batch-check-batchresults" doc:id="0f72dda5-a95e-4903-8f77-189fdf4158c2" >
+		<scheduler doc:name="Scheduler" doc:id="e2ff6a26-5785-445b-a7f0-e3e37bb2fa41" >
+			<scheduling-strategy >
+				<fixed-frequency timeUnit="MINUTES" frequency="${scheduler.bulkget.frequency}" startDelay="${scheduler.bulkget.startdelay}"/>
+			</scheduling-strategy>
+		</scheduler>
+		<set-variable value="#[now()]" doc:name="Start Time" doc:id="631001ad-7060-4402-a63d-610cbc4f964a" variableName="startTime"/>
+		<json-logger:logger doc:name="Before Job Start" doc:id="a29cbe40-fff2-47e1-bbd2-ff77fbb73603" config-ref="JSON_Logger_Config" message='#["${batch.name} Has Started"]' >
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    timestarted: now()
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<flow-ref doc:name="Check Batch Results" doc:id="7735aaeb-737d-40a4-8fcc-ae4dd12521e8" name="check-if-id-exists"/>
+		<json-logger:logger doc:name="After Job Finished" doc:id="5881f530-6fa4-4697-afda-9bb97b9d36eb" config-ref="JSON_Logger_Config" message='#["${batch.name} Has Finished"]' tracePoint="END" >
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+	timestarted: vars.startTime,
+    timefinished: now(),
+    duration: vars.startTime - now()
+}]]]></json-logger:content>
+		</json-logger:logger>
+	</flow>
+	<flow name="errorHospitalReprocess-flow" doc:id="a2c60e2f-a98e-410b-8a0c-1d99e1addcf9" >
+		<scheduler doc:name="Scheduler" doc:id="69c0eb27-f955-4bed-b7ee-f3a254bcdcf9" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="${scheduler.errorrepro.frequency}" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<flow-ref doc:name="Flow Reference" doc:id="8e4c913d-2429-4b92-b362-979c0240bbc7" name="errorhospital-reprocess"/>
+	</flow>
+</mule>

@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<sub-flow name="errorhospital-flow" doc:id="b8f0f2ce-7039-488d-adbe-d8b7061e0cd6" >
+		<json-logger:logger doc:name="Before Error Hospital" doc:id="10f31ca3-ff96-4ff3-8beb-5689c27953f9" config-ref="JSON_Logger_Config" message='#["Before Error Hospital Send"]' >
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<until-successful maxRetries="5" doc:name="Until Successful" doc:id="6958bb5c-b95e-4709-9cbb-29bdd46cfab3" >
+			<http:request method="POST" doc:name="Error Hospital Post" doc:id="e4ea391b-ad46-428d-840b-0c441d50e78b" config-ref="HTTP_Error-Hospital" path="/errors" />
+		</until-successful>
+		<json-logger:logger doc:name="After Error Hospital" doc:id="9699851e-e266-43c7-9f20-0abbfaf07690" config-ref="JSON_Logger_Config" message='#["After Error Hospital Send"]' tracePoint="END" >
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+	</sub-flow>
+	<sub-flow name="errorhospital-reprocess" doc:id="7e6ac492-ca87-4cda-80b5-3a132a3531f8" >
+		<json-logger:logger doc:name="Before Error Hospital Reproccess" doc:id="33a9c193-448b-42fd-b16e-1b2a1cb64224" config-ref="JSON_Logger_Config" message='#["Start Error Hospital ReProccess"]'>
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+		</json-logger:logger>
+		<salesforce:query doc:name="Get Error Records" doc:id="07dee5f7-cbc2-483e-ad56-de7c3ce6dba9" config-ref="Salesforce_Config" target="errorRecords">
+			<salesforce:salesforce-query ><![CDATA[${errorreprocessing.selectQuery}
+]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	dataflow : p('errorreprocessing.dataflow')
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<parallel-foreach doc:name="Parallel For Each" doc:id="59396e15-bfaf-4d6e-a847-11046ed34dc3" collection="#[vars.errorRecords]" maxConcurrency="1" target="errorpayload">
+			<ee:transform doc:name="Get Payload" doc:id="b33ead56-dd08-435f-98dd-58b0e1d881b5">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+read(payload.Payload__c, "application/json")
+
+
+]]></ee:set-payload>
+			</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="linkedErrorRecord" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+				</ee:variables>
+		</ee:transform>
+			<set-variable value='#["Upsert"]' doc:name="Salesforce Action" doc:id="4d6c6404-0695-47db-8260-2b55caf01b98" variableName="salesforceAction" />
+			<flow-ref doc:name="Salesforce Actions" doc:id="a84f46ee-8f3d-455c-89f0-33303fd41841" name="error-hospitalsalesforce-flow" />
+		</parallel-foreach>
+		<json-logger:logger doc:name="After Error Hospital Reproccess" doc:id="c8e1e040-a83d-4a4b-800c-c1a8715a977e" config-ref="JSON_Logger_Config" message='#["Finish Error Hospital Reproccess"]' tracePoint="END">
+			<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+		</json-logger:logger>
+	</sub-flow>
+	<sub-flow name="error-hospitalsalesforce-flow" doc:id="c155d0d9-e10b-41e3-bea1-a2de71411791" >
+		<set-variable value="#[vars.retryCount default 0]" doc:name="Retry Count" doc:id="951da4dd-770c-496d-9e3b-e6fb9c04d133" variableName="retryCount"/>
+		<ee:transform doc:name="Store Payload" doc:id="5b2cb9a6-7b1e-42e7-b318-a6f1da399088" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="initialPayload" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="6047af2b-ec69-43ab-846c-63029e57ae5f" >
+			<when expression='#[vars.salesforceAction == "Update"]' >
+				<json-logger:logger doc:name="Update Salesforce Record" doc:id="adb88016-14fc-48ed-83a7-532bc63f91c9" config-ref="JSON_Logger_Config" message='#["Update Salesforce Record"]' >
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<salesforce:update type="${salesforceconfig.bulkObject}" doc:name="Update" doc:id="2c559912-ef4c-4783-8458-85d7da8aa97b" config-ref="Salesforce_Config" >
+				</salesforce:update>
+			</when>
+			<when expression='#[vars.salesforceAction == "Upsert"]' >
+				<json-logger:logger doc:name="Upsert Salesforce Record" doc:id="24f99edd-bbc8-4afc-9e26-1ee3e65af855" config-ref="JSON_Logger_Config" message='#["Upsert Salesforce Record"]' >
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<salesforce:upsert objectType="${salesforceconfig.bulkObject}" externalIdFieldName="${salesforceconfig.bulkExternalIdFieldName}" doc:name="Upsert" doc:id="9430ff35-7bc2-48df-b38c-f58dba9f751e" config-ref="Salesforce_Config" >
+					<salesforce:records ><![CDATA[#[[payload]]]]></salesforce:records>
+				</salesforce:upsert>
+			</when>
+			<when expression='#[vars.salesforceAction == "Create"]' >
+				<json-logger:logger doc:name="Create Salesforce Record" doc:id="d3b0c2a1-6f59-478b-9f20-ce91953c1038" config-ref="JSON_Logger_Config" message='#["Create Salesforce Records"]' >
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<salesforce:create type="${salesforceconfig.bulkObject}" doc:name="Create" doc:id="bc262af0-cc92-4d92-9ae2-0464e6f5a137" config-ref="Salesforce_Config" >
+				</salesforce:create>
+			</when>
+			<when expression='#[vars.salesforceAction == "EHUpdate"]'>
+				<json-logger:logger doc:name="Update Error Hospital" doc:id="cd7fecb6-89d2-4fc2-a2da-56a97d9e736b" config-ref="JSON_Logger_Config" message='#["Update Error Hospital"]'/>
+				<salesforce:update doc:name="Update" doc:id="1b3465f5-08c8-4c6b-b0ae-1abdc5c0c74a" config-ref="Salesforce_Config" type="Error_Hospital__C">
+					<salesforce:records ><![CDATA[#[[payload]]]]></salesforce:records>
+				</salesforce:update>
+			</when>
+			<otherwise >
+				<json-logger:logger doc:name="No Salesforce Action Found" doc:id="208204fb-1da4-4428-b379-e4116fecb727" config-ref="JSON_Logger_Config" message='#["No Action Found"]' >
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+			</otherwise>
+		</choice>
+		<json-logger:logger doc:name="After Salesforce Job" doc:id="cdff2c4e-29ce-4d9b-807b-59367464b9ee" config-ref="JSON_Logger_Config" message='#["After Error Hospital Reprocess To Salesforce"]'/>
+		<choice doc:name="Choice" doc:id="94e67cac-de7f-4d6c-9ef1-99e6a4993c1b" >
+			<when expression='#[payload.successful == true and vars.salesforceAction != "EHUpdate"]'>
+				<json-logger:logger doc:name="Logger" doc:id="209b6cd5-3501-41f4-8261-a13584f611db" config-ref="JSON_Logger_Config" message='#["h1"]'/>
+				<ee:transform doc:name="Configure Return Payload" doc:id="4dc49195-cbbe-4b71-8edd-a6b7a50cb820" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+Retry_Count__c: vars.linkedErrorRecord.Retry_Count__c + vars.retryCount,
+Id: vars.linkedErrorRecord.Id,
+Retry_Flag__c: false
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<json-logger:logger doc:name="Logger1" doc:id="5fb2c5f3-017f-4973-bede-194edfe7a927" config-ref="JSON_Logger_Config" message='#["Hi"]' />
+				<set-variable value='#["EHUpdate"]' doc:name="Set Variable" doc:id="1f8f336e-f0d6-4b95-8ba2-99c0da1d0623" variableName="salesforceAction" />
+				<flow-ref doc:name="Update Error Hospital" doc:id="c453a68e-a078-4fb1-9c0e-f6ee920b9724" name="error-hospitalsalesforce-flow" />
+			</when>
+			<when expression='#[payload.successful == false and vars.retryCount &lt; 3 and vars.salesforceAction != "EHUpdate"]'>
+				<json-logger:logger doc:name="Insert Failed &lt; 3 Retries" doc:id="81fed7a6-287b-4d76-b9f0-51e51a458610" config-ref="JSON_Logger_Config" message='#["Insert Failed &lt; 3 Retries"]'>
+					<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+				<set-variable value="#[vars.retryCount + 1]" doc:name="Increase retry count" doc:id="ddb6a5c5-90f8-45ad-babf-d97c68bf4830" variableName="retryCount"/>
+				<ee:transform doc:name="Set Initial Payload" doc:id="0dcbc9f1-6e44-49ba-ad27-f3dcac7663f7">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+vars.initialPayload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="Retry Flow" doc:id="7b0dde37-da9d-47d1-bb7b-90f3ddc206e1" name="error-hospitalsalesforce-flow"/>
+			</when>
+			<when expression='#[vars.salesforceAction == "EHUpdate"]'>
+				<json-logger:logger doc:name="Enter Error Hospital Update" doc:id="4e4aca72-0a0f-41b8-9551-aec85baa45dd" config-ref="JSON_Logger_Config" message='#["Error Hospital Updated"]'/>
+			</when>
+			<otherwise >
+				<json-logger:logger doc:name="Logger" doc:id="1b09a570-06a4-4c64-a60d-c339b31c1638" config-ref="JSON_Logger_Config" message='#["H1"]'/>
+				<ee:transform doc:name="Configure Return Payload" doc:id="bbead3ce-56fb-4f6b-a6e5-1562373ef5aa" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+Retry_Count__c: vars.linkedErrorRecord.Retry_Count__c + vars.retryCount,
+Id: vars.linkedErrorRecord.Id,
+Retry_Flag__c: false,
+Status__c: "Data Failure"
+}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<json-logger:logger doc:name="Logger" doc:id="2d4bb79e-920f-4a1e-bc51-e719e7c7bb36" config-ref="JSON_Logger_Config" message='#["Hi"]'/>
+				<set-variable value='#["EHUpdate"]' doc:name="Set Variable" doc:id="9bf004c6-a263-4358-a48e-82fd05267ceb" variableName="salesforceAction"/>
+				<flow-ref doc:name="Update Error Hospital" doc:id="c10bf951-5bb1-44d9-b9b0-500ef1052b05" name="error-hospitalsalesforce-flow"/>
+			</otherwise>
+		</choice>
+	</sub-flow>
+</mule>

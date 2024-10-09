@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:cloudhub="http://www.mulesoft.org/schema/mule/cloudhub"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/cloudhub http://www.mulesoft.org/schema/mule/cloudhub/current/mule-cloudhub.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+
+	<configuration-properties
+		file="properties/${mule.env}-properties.yaml" doc:name="Env Config Props" />
+
+	<configuration-properties
+		file="properties/common-properties.yaml" doc:name="Common Config Props" />
+		
+	<configuration-properties
+		doc:name="Error Config Prop"
+		doc:id="632969a9-6043-4ab8-bc32-fb39deac3c3a"
+		file="properties/error-properties.yaml" />
+
+	<secure-properties:config
+		name="secureEnvPropsConfig" doc:name="Secure Properties Config"
+		doc:id="7960805e-4358-4b4f-a242-5b305bae6189"
+		file="properties/${mule.env}-secure-properties.yaml" key="${mule.encryption.key}">
+	</secure-properties:config>
+	<global-property doc:name="Global Property" doc:id="8794a885-2fd0-4274-aab2-bd6c385c15fb" name="mule.env" value="uat" />
+	<global-property doc:name="Global Property" doc:id="9f494848-5aed-4fad-ad7b-ac37e1b08b13" name="mule.encryption.key" value="AccessGroup12345" />
+	<!-- <tls:context name="TLS_Context" doc:name="TLS Context" doc:id="b8581581-8899-4bca-9c1e-5e510645bc00" >
+		<tls:key-store type="${tls.keystore.type}" path="${tls.keystore.path}" keyPassword="${secure::tls.keystore.keyPassword}" password="${secure::tls.keystore.keyPassword}" alias="${tls.keystore.alias}"/>
+	</tls:context> -->
+	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="650876ed-93af-4cdf-a665-b4970cd220f6" applicationName="${batch.name}" applicationVersion="${batch.version}" environment="${mule.env}"/>
+	<db:config name="thssql-Server" doc:name="Database Config" doc:id="21ad31ec-d50e-4037-b2eb-ff397d44eb3b" >
+		<db:mssql-connection host="${sql.thssql1.host}" port="${sql.thssql1.port}" user="${secure::sql.thssql1.username}" password="${secure::sql.thssql1.password}" databaseName="${sql.thssql1.database}"/>
+	</db:config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="42e4c1aa-341e-4bba-aab8-fe22ce3be6d0" >
+		<salesforce:jwt-connection consumerKey="${secure::salesforceconfig.consumer}" keyStore="${salesforceconfig.keyStore}" storePassword="${secure::salesforceconfig.storePassword}" certificateAlias="${salesforceconfig.certalias}" principal="${secure::salesforceconfig.princable}" tokenEndpoint="https://${salesforceconfig.tokenEndpoint}.salesforce.com/services/oauth2/token"/>
+	</salesforce:sfdc-config>
+	<http:request-config name="HTTP_Error-Hospital" doc:name="HTTP Request configuration" doc:id="0d8fea1d-cfa6-4c44-aa0f-aea8c54c407c" basePath="/api/">
+		<http:request-connection host="${http.errorhospital.host}" port="${http.errorhospital.port}" protocol="HTTPS">
+			<reconnection >
+				<reconnect frequency="${http.errorhospital.frequency}" count="${http.errorhospital.reconn}" />
+			</reconnection>
+		</http:request-connection>
+		<http:default-headers >
+			<http:default-header key="client_id" value="${secure::http.clientid}" />
+			<http:default-header key="client_secret" value="${secure::http.secret}" />
+		</http:default-headers>
+	</http:request-config>
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="a6950e05-3afe-4838-8284-5ac0fb304f41" />
+	<os:object-store name="OS-BatchId" doc:name="Object store" doc:id="b435b1d0-a2a2-4b4e-bb22-5b276d3276f6" config-ref="ObjectStore_Config" />
+	<os:object-store name="OS-Watermark" doc:name="Object store" doc:id="6727330d-b1aa-40cb-913b-157120e6c10b" maxEntries="1" config-ref="ObjectStore_Config" />
+
+</mule>

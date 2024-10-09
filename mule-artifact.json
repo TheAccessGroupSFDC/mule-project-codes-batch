@@ -1,0 +1,11 @@
+{
+    "minMuleVersion": "4.4.0",
+    "javaSpecificationVersions": ["1.8"],
+    "secureProperties": [
+        "anypoint.platform.client_secret",
+        "encrypt.key",
+        "secure::tls.keystore.keyPassword",
+        "secure::accessGroup.alertnotification.api.clientId",
+        "secure::accessGroup.alertnotification.api.clientSecret"
+    ]
+}

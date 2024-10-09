@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:custom-metrics="http://www.mulesoft.org/schema/mule/custom-metrics" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/custom-metrics http://www.mulesoft.org/schema/mule/custom-metrics/current/mule-custom-metrics.xsd">
+	<sub-flow name="check-if-id-exists" doc:id="7357d326-25d1-4995-968e-a21e1f0ca33b" >
+		<os:retrieve-all doc:name="Retrieve all" doc:id="261fe378-a50b-4b7c-9288-dc75379f230f" objectStore="OS-BatchId"/>
+		<choice doc:name="Choice" doc:id="348cc64d-13a6-40e8-b65f-0118ea5b4fbb">
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<parallel-foreach doc:name="Parallel For Each" doc:id="6bc1f6bb-b01a-495a-a94b-02bd1b4ea42b" collection="#[payload]">
+						<json-logger:logger doc:name="Batch Id Found" doc:id="689171fc-0da7-4a95-a078-98698b6b6eee" config-ref="JSON_Logger_Config" message='#["Enter BatchId Found"]'>
+					<json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+
+}]]]></json-logger:content>
+				</json-logger:logger>
+						<flow-ref doc:name="Flow Reference" doc:id="b9e5a302-5a37-4c87-904f-7e641f134a66" name="check-batch-resultsSub_Flow" />
+					</parallel-foreach>
+			</when>
+			<otherwise>
+				<json-logger:logger doc:name="No Batch ID Found" doc:id="90cf79c1-4138-4eca-b0c0-2500346bb268" config-ref="JSON_Logger_Config" message='#["No Batchs Found"]' />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="check-batch-resultsSub_Flow" doc:id="e699c6d5-de62-491a-bd4a-4d5906ddcd2e" >
+		<until-successful maxRetries="30" doc:name="Until Successful" doc:id="cd168d4a-4d4f-4143-ad0a-3a62ef41fcd1" millisBetweenRetries="30000" >
+			<salesforce:get-job-state-bulk-api-v2 doc:name="Get job state bulk api v" doc:id="1d01105b-2a53-45c5-aec8-3e0fdfc2252f" config-ref="Salesforce_Config" id="#[payload[0]]" />
+			<choice doc:name="Choice" doc:id="76ebb2ee-dfb1-4a15-86e7-aa33b1bbce4a" >
+				<when expression="#[payload.state == 'JobComplete']" >
+					<set-variable value="#[payload.id]" doc:name="Store BatchId" doc:id="309eeabc-935b-4584-af7b-9c12a3a29476" variableName="batchId"/>
+					<salesforce:retrieve-job-successful-results-bulk-v2 doc:name="Retrieve job successful results bulk v " doc:id="733b8a97-6c6a-454e-9fd0-91c3c28618d9" config-ref="Salesforce_Config" id="#[payload.id]" target="successResults" />
+					<json-logger:logger doc:name="After Retrieve Job Success" doc:id="d4fde101-4979-4fcf-a88f-2c2e31ece85d" config-ref="JSON_Logger_Config" message='#["After Retrieve Job Success"]' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    successRecords: payload.numberRecordsProcessed,
+    failedRecords: payload.numberRecordsFailed,
+    apexProccessingTime: payload.apexProcessingTime,
+    apiActiveTime: payload.apiActiveProcessingTime    
+}]]]></json-logger:content>
+					</json-logger:logger>
+					<custom-metrics:send doc:name="Send Custom Metric" doc:id="cfba4b24-e7e4-4418-9621-ef30c59beff4" metricName="salesforce_insert">
+						<custom-metrics:dimensions>
+							<custom-metrics:dimension dimensionName="batch-type" value='#["SalesforceInsert"]' />
+						</custom-metrics:dimensions>
+						<custom-metrics:facts>
+							<custom-metrics:fact factName="successfulRecords" value="#[payload.numberRecordsProcessed default 0]" />
+							<custom-metrics:fact factName="erroredRecords" value="#[payload.numberRecordsFailed default 0]" />
+						</custom-metrics:facts>
+					</custom-metrics:send>
+					<choice doc:name="Choice" doc:id="9d27c6e6-a030-4790-b31f-a9ba1936d679" >
+						<when expression="#[payload.numberRecordsFailed &gt; 0]" >
+							<salesforce:retrieve-job-failed-results-bulk-v2 doc:name="Retrieve job failed results bulk v " doc:id="a15e8a51-9be1-4516-b771-d86fd209d726" config-ref="Salesforce_Config" id="#[payload.id]" target="payloadfailures" />
+							<json-logger:logger doc:name="After Retrieved Failed Records" doc:id="06207a98-2d55-41c8-8526-000f70bc03ec" config-ref="JSON_Logger_Config" message='#["Failed Records"]' />
+							<ee:transform doc:name="Format for Error Hospital" doc:id="0bf44182-fd0b-4538-bddc-d9034e5f488c" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+	vars.payloadfailures map (item) ->{
+	dataFlow: p('errorreprocessing.dataflow'),
+	errorDetails: "",
+	errorText: item.errorMessage,
+	payload: write(item.originalFields, "application/json"),
+	retryCount: 0,
+	retryFlag: true,
+	sourceSystem: "SQL",
+	status:"Retry",
+	targetSystem:"Salesforce"
+	}]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<flow-ref doc:name="Error Hospital" doc:id="14adee11-44d7-4b2c-8f52-a7f351164137" name="errorhospital-flow" targetValue="#[payloadfailures]" />
+						</when>
+						<otherwise >
+							<json-logger:logger doc:name="No Record Failures" doc:id="d6efdb4c-bb6c-4e65-a854-03e6977339ff" config-ref="JSON_Logger_Config" message='#["No Failed Records"]' />
+						</otherwise>
+					</choice>
+					<!-- [STUDIO:"Set Backupdate"]<set-variable value="true" doc:name="Set Backupdate" doc:id="9d3b1ccc-1365-4266-84de-d1a282114fa3" variableName="backupdateRequired" /> [STUDIO] -->
+					<!-- [STUDIO:"Choice1"]<choice doc:name="Choice1" doc:id="778a3463-50d5-4ce6-baa1-bd39165db876" >
+						<when expression="#[(vars.backupdateRequired == 'true' and sizeOf(vars.successResults) &gt; 0) == true&#93;" >
+							<json-logger:logger doc:name="Backupdate Required" doc:id="358bd215-4af5-4687-8578-5a7a1ad80edf" config-ref="JSON_Logger_Config" message='#["Starting Sql Backupdate"&#93;' >
+								<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+
+}&#93;&#93;&#93;></json-logger:content>
+							</json-logger:logger>
+							<set-variable value="update" doc:name="Set sqlAction Update" doc:id="26610f71-1ce8-4097-b456-637768f3de0b" variableName="sqlAction" />
+							<flow-ref doc:name="Call SQL Actions Flow" doc:id="b920428a-490f-4cff-9f4e-05fe05bca9da" name="sqlactions-flow" />
+						</when>
+						<otherwise >
+							<json-logger:logger doc:name="No Backupdate Required" doc:id="a0a48660-1eea-4124-833b-945748f72f51" config-ref="JSON_Logger_Config" message='#["No Backupdate Required"&#93;' >
+								<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json &#45;&#45;-
+{
+}&#93;&#93;&#93;></json-logger:content>
+							</json-logger:logger>
+						</otherwise>
+					</choice> [STUDIO] -->
+					<os:remove doc:name="Remove BatchId" doc:id="37cbd718-0dcc-4317-b159-900b39d05f0b" objectStore="OS-BatchId" key="#[vars.batchId]"/>
+					<json-logger:logger doc:name="Success Finished" doc:id="5ed3d178-b832-4c1a-a96e-70e660ee49fe" config-ref="JSON_Logger_Config" message='#["Job Finished with success"]' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+   payload: payload
+}]]]></json-logger:content>
+					</json-logger:logger>
+				</when>
+				<when expression="#[payload.state == 'Failed']" >
+					<json-logger:logger doc:name="Failed Job " doc:id="602940b9-19ea-4675-bf0e-075806c5ab44" config-ref="JSON_Logger_Config" message='#["Job Finished with Failed "]' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+ ErrorMessage: payload.errorMessage
+}]]]></json-logger:content>
+					</json-logger:logger>
+					<os:remove doc:name="Remove BatchId" doc:id="6fcda2de-53e7-446a-b28e-5686b16a6601" objectStore="OS-BatchId" key="#[payload.id]"/>
+				</when>
+				<otherwise >
+					<json-logger:logger doc:name="Logger" doc:id="65aa1b57-37e8-4c86-843f-577cef5c58da" config-ref="JSON_Logger_Config" message='#["Job Still Runnning " ++ payload.Id]' >
+						<json-logger:content ><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+   
+}]]]></json-logger:content>
+					</json-logger:logger>
+				</otherwise>
+			</choice>
+		</until-successful>
+	</sub-flow>
+</mule>

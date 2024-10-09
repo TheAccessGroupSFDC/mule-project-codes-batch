@@ -1,0 +1,14 @@
+sql:
+  thssql1:  
+    username: "![zgdBIXE1djM0uiUeQWsE/g==]"
+    password: "![+d0u81kmXDrb2GhdRHAzzQ==]"
+ 
+salesforceconfig:
+    storePassword: "![FsjeK37JCktX/ad8a8iPoQ==]"
+    princable: "![nyxAkVqEgFPZt5UtXSG9GaPmo2IjigxNY0YX42VNF/i0d+y8hAB7Jv4VRyiIo9i3]"
+    #consumer: "![mBnh836iVL/O5mq5mDHsrId42RXziW1MpAqyp+jneihyPUqufZh6Wk02AKA1N7IEOnCfxiI2rPrfXoXwktDn5WAPnLoSvg5w2KENiGLcPPr1r8JdnuSun1KZ6Zowz5vR]"
+    consumer: "![X4ivy+N6pVinNUtc8SjoxhgKBNOVYI199kF8M+SnyOE1ctJSUA9u0HpldN+qWDo1Vrz+yzBkVFY965VHUnW0U9YEKb+ng0WqmQ9L/4aXxRw8zOP8kOSWEbn/I1pbkT3u]"
+    
+http:
+    clientid: "![9fT8QKs8H5p7Yj89vi1Z6osyDvW6CNitqAUxY6NMJl/KAfLLUApUCtT4S06kIDFf]"
+    secret: "![18rTKHCTJ7mCYVRi2+go/xw2qtdo9HbKoOb9YjYlGrCbfiLQBIHmiF7sFvaGFigT]"

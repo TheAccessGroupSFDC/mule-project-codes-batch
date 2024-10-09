@@ -1,0 +1,10 @@
+sql:
+  thssql1:
+    host: "THSSQL1.uk.access-accounts.com"
+    port: "1433"
+    database: "salesforce"
+    
+salesforceconfig:
+  keyStore:      "${mule.home}/apps/${app.name}/jks/prod/00D58000000Z4gm.jks"
+  certalias:     "mulesoft"
+  tokenEndpoint: "login"
