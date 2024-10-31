@@ -26,9 +26,9 @@ import toBoolean from dw::util::Coercions
 output application/csv quoteValues=true,header=true,separator=";",escape='"'
 ---
 	payload map (item) ->{
-	Project_Code__c: item.CH_Code,
-	Id : item.Account__c,
-	'Name': item.'CH_Code'
+	Project_Code__c: item.CH_CODE,
+	Account__c : item.id,
+	'Name': item.'CH_CODE'
 	}]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>

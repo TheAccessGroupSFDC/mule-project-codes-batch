@@ -3,11 +3,12 @@ sql:
     host: "THSCenAccSQL139.uk.access-accounts.com"
     port: "1433"
     database: "salesforce"
-    selectQuery: "select CH_CODE, CC2, id from(
+    selectQuery: "select CH_CODE, CC2, id
+from(
 SELECT CH_CODE,
 Substring(CH_CODE,0,CharIndex('-',CH_CODE)) CC2
 FROM [ACCOUNTS].[dbo].[CST_COSTHEADER]
-where CH_STATUS = 'A' and CH_CODE IN ('MAD038-02', 'MAD038-01' , 'MAR190-01')
+where CH_STATUS = 'A'
 and (CH_CODE like '%-0%'
 OR  CH_CODE like '%-1%'
 OR  CH_CODE like '%-2%'
@@ -15,10 +16,10 @@ OR  CH_CODE like '%-3%'
 OR  CH_CODE like '%-4%'
 OR  CH_CODE like '%-5%'
 OR  CH_CODE like '%-6%'
-OR  CH_CODE like '%-7%' 
+OR  CH_CODE like '%-7%'
 OR  CH_CODE like '%-8%'
 OR  CH_CODE like '%-9%')) tbl1
-inner join [SalesForce].[dbo].Accounts on  CC2 collate SQL_Latin1_General_CP1_CI_AS =  AccountNumber
+inner join [Salesforce].[dbo].Accounts on  CC2 collate SQL_Latin1_General_CP1_CI_AS =  AccountNumber
 where isdeleted = 0"
     updateQuery: "update dbo.Campaigns set update_salesforce = 0 where Id = :Id"
     insertQuery: "select 1 from test"

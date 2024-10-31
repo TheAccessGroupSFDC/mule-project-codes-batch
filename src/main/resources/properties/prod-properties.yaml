@@ -1,10 +1,56 @@
 sql:
   thssql1:
-    host: "THSSQL1.uk.access-accounts.com"
+    host: "sqlLive.access-accounts.com"
     port: "1433"
     database: "salesforce"
-    
+    selectQuery: "select CH_CODE, CC2, id
+from(
+SELECT CH_CODE,
+Substring(CH_CODE,0,CharIndex('-',CH_CODE)) CC2
+FROM [ACCOUNTS].[dbo].[CST_COSTHEADER]
+where CH_STATUS = 'A'
+and (CH_CODE like '%-0%'
+OR  CH_CODE like '%-1%'
+OR  CH_CODE like '%-2%'
+OR  CH_CODE like '%-3%'
+OR  CH_CODE like '%-4%'
+OR  CH_CODE like '%-5%'
+OR  CH_CODE like '%-6%'
+OR  CH_CODE like '%-7%'
+OR  CH_CODE like '%-8%'
+OR  CH_CODE like '%-9%')) tbl1
+inner join [Salesforce].[dbo].Accounts on  CC2 collate SQL_Latin1_General_CP1_CI_AS =  AccountNumber
+where isdeleted = 0"
+    updateQuery: "update dbo.Campaigns set update_salesforce = 0 where Id = :Id"
+    insertQuery: "select 1 from test"
+    mergeQuery:   ""
 salesforceconfig:
   keyStore:      "${mule.home}/apps/${app.name}/jks/prod/00D58000000Z4gm.jks"
-  certalias:     "mulesoft"
+  certalias:     "mulesoft_2025"
   tokenEndpoint: "login"
+  bulkObject: "Project_Code__c"
+  selectQuery: ""
+  bulkLineEnding: "CRLF"
+  bulkColumnDelim: "SEMICOLON"
+  bulkExternalIdFieldName: "Id"
+http:
+  errorhospital:
+    host: "error-hospital-sapi-2a5eys.internal-a3fso7.gbr-e1.cloudhub.io"
+    port: "443"
+    frequency: "5000"
+    reconn: "5"
+scheduler:
+  sqltosalesforce:
+    frequency: "1440"
+    startdelay: "0"
+  salesforcetosql:
+    frequency: "1440"
+    startdelay: "0"
+  bulkget: 
+    frequency: "60"
+    startdelay: "10"
+  errorrepro: 
+    frequency: "60"
+errorreprocessing:
+  selectQuery: "select id, Data_Flow__c, Payload__c, Retry_Count__c, Retry_Flag__c, Correlation_Id__c, Status__c from Error_Hospital__c where Data_Flow__c = ':dataflow' and Retry_Flag__c = true"
+  dataflow: "project-codes-batch-flow"

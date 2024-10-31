@@ -39,8 +39,8 @@ http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mu
 		doc:id="7960805e-4358-4b4f-a242-5b305bae6189"
 		file="properties/${mule.env}-secure-properties.yaml" key="${mule.encryption.key}">
 	</secure-properties:config>
-	<global-property doc:name="Global Property" doc:id="8794a885-2fd0-4274-aab2-bd6c385c15fb" name="mule.env" value="uat" />
-	<global-property doc:name="Global Property" doc:id="9f494848-5aed-4fad-ad7b-ac37e1b08b13" name="mule.encryption.key" value="AccessGroup12345" />
+	<global-property doc:name="Global Property" doc:id="8794a885-2fd0-4274-aab2-bd6c385c15fb" name="mule.env" value="prod" />
+	<global-property doc:name="Global Property" doc:id="9f494848-5aed-4fad-ad7b-ac37e1b08b13" name="mule.encryption.key" value="SPJEPtauAqML6Vgr" />
 	<!-- <tls:context name="TLS_Context" doc:name="TLS Context" doc:id="b8581581-8899-4bca-9c1e-5e510645bc00" >
 		<tls:key-store type="${tls.keystore.type}" path="${tls.keystore.path}" keyPassword="${secure::tls.keystore.keyPassword}" password="${secure::tls.keystore.keyPassword}" alias="${tls.keystore.alias}"/>
 	</tls:context> -->
