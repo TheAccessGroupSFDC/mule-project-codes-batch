@@ -39,7 +39,7 @@ output application/csv quoteValues=true,header=true,separator=";",escape='"'
 {
 }]]]></json-logger:content>
 		</json-logger:logger>
-				<salesforce:create-job-bulk-api-v2 doc:name="Create job bulk api v 2" doc:id="71796335-478d-47e2-8194-45ed69ce2d4f" config-ref="Salesforce_Config" objectType="${salesforceconfig.bulkObject}" operation="upsert" lineEnding="${salesforceconfig.bulkLineEnding}" columnDelimiter="${salesforceconfig.bulkColumnDelim}" externalIdFieldName='Id'/>
+				<salesforce:create-job-bulk-api-v2 doc:name="Create job bulk api v 2" doc:id="71796335-478d-47e2-8194-45ed69ce2d4f" config-ref="Salesforce_Config" objectType="${salesforceconfig.bulkObject}" operation="upsert" lineEnding="${salesforceconfig.bulkLineEnding}" columnDelimiter="${salesforceconfig.bulkColumnDelim}" externalIdFieldName='Project_Code__c'/>
 				<os:store doc:name="Store-ID" doc:id="1703acd1-adc5-4500-841d-a0eb2bbec95d" key="#[payload.id]" objectStore="OS-BatchId">
 			<os:value><![CDATA[#[payload.id]]]></os:value>
 		</os:store>

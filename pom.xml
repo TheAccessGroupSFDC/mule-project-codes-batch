@@ -28,7 +28,7 @@
 		<tags>BATCH,Template</tags>
 		<categories>[]</categories>
 		<fields>[]</fields>
-		<mule.maven.plugin.version>4.2.0</mule.maven.plugin.version>
+		<mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
 	</properties>
 
 	<dependencies>
