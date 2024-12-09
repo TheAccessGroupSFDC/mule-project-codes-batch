@@ -34,7 +34,7 @@ salesforceconfig:
   selectQuery: ""
   bulkLineEnding: "CRLF"
   bulkColumnDelim: "SEMICOLON"
-  bulkExternalIdFieldName: "Id"
+  bulkExternalIdFieldName: "Project_Code__c"
   
 errorreprocessing:
   selectQuery: "select id, Data_Flow__c, Payload__c, Retry_Count__c, Retry_Flag__c, Correlation_Id__c, Status__c from Error_Hospital__c where Data_Flow__c = ':dataflow' and Retry_Flag__c = true"
