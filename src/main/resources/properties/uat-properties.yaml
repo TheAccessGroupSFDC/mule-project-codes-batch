@@ -25,14 +25,14 @@ where isdeleted = 0"
     insertQuery: "select 1 from test"
     mergeQuery:   ""
 salesforceconfig:
-  keyStore:      "${mule.home}/apps/${app.name}/jks/uat/00DUE000000uZeF.jks"
+  keyStore:      "${mule.home}/apps/${app.name}/jks/uat/00DUE000002ErBN.jks"
   certalias:     "mulesoft_2025"
   tokenEndpoint: "test"
   bulkObject: "Project_Code__c"
   selectQuery: ""
   bulkLineEnding: "CRLF"
   bulkColumnDelim: "SEMICOLON"
-  bulkExternalIdFieldName: "Id"
+  bulkExternalIdFieldName: "Project_Code__c"
 http:
   errorhospital:
     host: "error-hospital-sapi-uat-k7qmu8.pa977o.gbr-e1.cloudhub.io"
