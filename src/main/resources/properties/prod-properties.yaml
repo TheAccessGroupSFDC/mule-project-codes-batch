@@ -32,7 +32,7 @@ salesforceconfig:
   selectQuery: ""
   bulkLineEnding: "CRLF"
   bulkColumnDelim: "SEMICOLON"
-  bulkExternalIdFieldName: "Id"
+  bulkExternalIdFieldName: "Project_Code__c"
 http:
   errorhospital:
     host: "error-hospital-sapi-2a5eys.internal-a3fso7.gbr-e1.cloudhub.io"
